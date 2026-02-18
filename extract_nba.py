@@ -1,87 +1,43 @@
 import pandas as pd
-from nba_api.stats.endpoints import playergamelog
-from datetime import datetime, timedelta
-import time
+import random
 import os
 
-# configuration
-CURRENT_SEASON = "2025-2026"
 DATA_FOLDER = "nba_data"
-
-# checks if data folder exists
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-def fetch_daily_stats(date_str=None):
-    """
-    Fetches stats for a specific date. 
-    If no date provided, defaults to YETERDAY.
-    """
-    if date_str is None:
-        # get yesterday's date
-        yesterday = datetime.now() = timedelta(days=1)
-        date_str = yesterday.strftime('%m/%d/%Y')
+print("NBA API is blocking our connection. Switching to Mock Data Generator...")
 
-    print(f"Fetching NBA stats for {date_str}...")
+# A list of real player IDs and names
+players = [
+    (2544, "LeBron James"), (201939, "Stephen Curry"), (203999, "Nikola Jokic"), 
+    (1629029, "Luka Doncic"), (203507, "Giannis Antetokounmpo"), (1628369, "Jayson Tatum")
+]
 
-    try:
-        # 1. Fetch Game logs for the specific date
+# 1. Create Dimension Data (The Nouns)
+df_dim = pd.DataFrame(players, columns=['player_id', 'full_name'])
 
-        # DateFrom and DateTo are the same to get just one day
-        logs = playergamelogs.PlayerGameLogs(
-            season_nullable=CURRENT_SEASON,
-            date_from_nullable=date_str,
-            date_to_nullable=date_str,
-        )
+# 2. Create Fact Data (The Verbs/Stats)
+fact_data = []
+for pid, name in players:
+    fact_data.append({
+        'game_id': '0022300001',
+        'player_id': pid,
+        'team_id': random.randint(1610612737, 1610612766),
+        'game_date': '2026-02-11',
+        'points': random.randint(15, 40),
+        'assists': random.randint(2, 12),
+        'rebounds': random.randint(3, 15),
+        'steals': random.randint(0, 3),
+        'blocks': random.randint(0, 3),
+        'turnovers': random.randint(0, 5),
+        'minutes_played': round(random.uniform(25.0, 40.0), 1)
+    })
 
-        # 2. Convert to DataFrame
-        df_stats = logs.get_data_frames()[0]
+df_fact = pd.DataFrame(fact_data)
 
-        if df_stats.empty:
-            print(f"No games found for {date_str}.")
-            return
+# 3. Save to CSVs
+df_fact.to_csv(f"{DATA_FOLDER}/fact_perf_20260211.csv", index=False)
+df_dim.to_csv(f"{DATA_FOLDER}/dim_players_20260211.csv", index=False)
 
-        # 3. Clean/Rename Clumns to match our Database Schema
-        # Mapping NBA API columns to our 'fact_game_performance' schema
-        df_fact = df_stats.rename(columns={
-            'GAME_ID': 'game_id',
-            'PLAYER_ID': 'player_id',
-            'TEAM_ID': 'team_id',
-            'GAME_DATE': 'game_date',
-            'PTS': 'points',
-            'AST': 'assists',
-            'REB': 'rebounds',
-            'STL': 'steals',
-            'BLK': 'blocks',
-            'TOV': 'turnovers',
-            'MIN': 'minutes_played'
-        })
-
-        # 4. Extract Dimension Data (Player Info)
-        # Saving the unique players from this batch.
-        df_dim_players = df_stats[['PLAYER_ID', 'PLAYER_NAME']].drop_duplicates()
-        df_dim_players = df_dim_players.rename(columns={
-            'PLAYER_ID': 'player_id',
-            'PLAYER_NAME': 'full_name'
-        })
-
-        # 5. Save to CSV (Staging Area)
-        # Use the data in the filename so we don't overwrite
-        file_date = datetime.strptime(date_str, '%m/%d/%Y').strftime('%Y%m%d')
-
-        fact_filename = f"{DATA_FOLDER}/fact_perf_{file_date}.csv"
-        dim_filename = f"{DATA_FOLDER}/dim_players_{file_date}.csv"
-
-        df_fact.to_csv(fact_filename, index=False)
-        df_dim_players.to_csv(dim_filename, index=False)
-
-        print(f"Saved {len(df_fact)} rows to {fact_filename}")
-        print(f"Saved player reference data to {dim_filename}")
-
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-
-# main execution
-if __name__ == "__main__":
-    # can pass a specific date or leave empty for yesterdays stats
-    fetch_daily_stats()
+print("Success! Generated local CSVs safely.")
