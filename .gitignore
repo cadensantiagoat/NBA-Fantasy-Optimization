@@ -1,0 +1,9 @@
+# Ignore the virtual environment
+.venv/
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.__pycache__
+# Ignore raw data folder
+nba_data/
