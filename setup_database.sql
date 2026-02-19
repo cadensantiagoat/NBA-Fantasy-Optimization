@@ -34,3 +34,36 @@ CREATE TABLE IF NOT EXISTS stg_dim_players (
     player_id INT,
     full_name VARCHAR
 );
+
+-- 1. Recreate the fact table to include the missing 'steals' column
+CREATE OR REPLACE TABLE fact_game_performance(
+    game_id VARCHAR,
+    player_id INT,
+    team_id INT,
+    game_date DATE,
+    points INT,
+    assists INT,
+    rebounds INT,
+    steals INT,       -- <--- Added steals back in!
+    blocks INT,
+    turnovers INT,
+    minutes_played FLOAT,
+    fantasy_points FLOAT,
+    inserted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+);
+
+-- 2. Creating STAGING table for CSV data of game performance
+CREATE TABLE IF NOT EXISTS stg_fact_game_performance (
+    game_id VARCHAR,
+    player_id INT,
+    team_id INT,
+    game_date DATE,
+    points INT,
+    assists INT,
+    rebounds INT,
+    steals INT,
+    blocks INT,
+    turnovers INT,
+    minutes_played FLOAT
+);
+
