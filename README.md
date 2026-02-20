@@ -1,7 +1,7 @@
-NBA Fantasy Optimization Pipeline
+NBA Fantasy Optimization Pipeline:
 An end-to-end data engineering pipeline that extracts NBA player performance data, transforms it using Python and Pandas, and loads it into a Snowflake Cloud Data Warehouse using a Star Schema architecture.
 
-Note
+Note:
 During development, external API restrictions blocked live data fetching. To maintain development velocity, I implemented a Mock Data Engine (extract_nba.py) that generates schema-accurate player and game stats, allowing for continuous testing of the Snowflake integration.
 
 Tech Stack
