@@ -31,6 +31,11 @@ conn = snowflake.connector.connect(
 print("Uploading NHL Players to dim_players...")
 # Using chunk_size to avoid memory issues 
 success, nchunks, nrows, _ = write_pandas(conn, df_dim, 'DIM_PLAYERS', quote_identifiers=False)
+print(f"Inserted {nrows} players into fact table.")
+
+# Uploading Fact Table
+print("Uploading NHL Stats to fact_nhl_performance...")
+success, nchunks, nrows, _ = write_pandas(conn, df_fact, 'FACT_NHL_PERFORMANCE', quote_identifiers=False)
 print(f"Inserted {nrows} stat rows into fact table.")
 
 conn.close()

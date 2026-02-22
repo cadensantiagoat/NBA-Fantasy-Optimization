@@ -3,18 +3,20 @@ import snowflake.connector
 import os
 from dotenv import load_dotenv
 
-# Setting page layout
+# Set page layout
 st.set_page_config(page_title="Fantasy Sports Optimizer", layout="wide")
 
 # Load credentials
 load_dotenv()
 
-st.title("NBA Fantasy Optimizer Dashboard")
-st.markdown("This dashboard pulls transformed data directly from our Snowflake Data Warehouse.")
+st.title("Multi-Sport Fantasy Optimizer Dashboard")
+st.markdown("Toggle between NBA and NHL data pulled directly from our Snowflake Data Warehouse.")
 
-# Functino that pulls data from Snowflake
+# 1. Add an interactive dropdown filter!
+sport_choice = st.selectbox("Select Sport:", ["NBA", "NHL"])
+
 @st.cache_data
-def load_data():
+def load_data(sport):
     conn = snowflake.connector.connect(
         user=os.getenv("SNOWFLAKE_USER"),
         password=os.getenv("SNOWFLAKE_PASSWORD"),
@@ -23,36 +25,45 @@ def load_data():
         database='NBA_FANTASY_DB',
         schema='RAW_DATA'
     )
-
-    # Query to join our tables and get the top fantasy performers
-    query = """
-    SELECT p.full_name, f.fantasy_points, f.points, f.assists, f.steals, f.blocks
-    FROM fact_game_performance f
-    JOIN dim_players p ON f.player_id = p.player_id
-    ORDER BY f.fantasy_points DESC;
-    """
-
+    
     cursor = conn.cursor()
+    
+    # 2. Dynamically change the SQL query based on the user's dropdown selection
+    if sport == "NBA":
+        query = """
+        SELECT p.full_name, f.fantasy_points, f.points, f.rebounds, f.assists, f.steals, f.blocks
+        FROM fact_game_performance f
+        JOIN dim_players p ON f.player_id = p.player_id
+        WHERE p.sport = 'NBA'
+        ORDER BY f.fantasy_points DESC
+        LIMIT 50;
+        """
+    else:
+        query = """
+        SELECT p.full_name, f.fantasy_points, f.goals, f.assists, f.shots, f.penalty_minutes, f.plus_minus
+        FROM fact_nhl_performance f
+        JOIN dim_players p ON f.player_id = p.player_id
+        WHERE p.sport = 'NHL'
+        ORDER BY f.fantasy_points DESC
+        LIMIT 50;
+        """
+        
     cursor.execute(query)
-
-    # Fetch results directly into a Pandas DataFrame
     df = cursor.fetch_pandas_all()
     conn.close()
     
     return df
 
-# Loading data
-df_fantasy = load_data()
+# 3. Load the data using the selected sport
+df_fantasy = load_data(sport_choice)
 
-# Building UI elements
+# 4. Build the UI elements
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Top Performers (Raw Data)")
-
-    # Display interactive dataframe
+    st.subheader(f"Top {sport_choice} Performers (Raw Data)")
     st.dataframe(df_fantasy, use_container_width=True)
 
 with col2:
-    st.subheader("Fantasy Points Leaderboard")
+    st.subheader(f"{sport_choice} Fantasy Points Leaderboard")
     st.bar_chart(data=df_fantasy, x='FULL_NAME', y='FANTASY_POINTS')
