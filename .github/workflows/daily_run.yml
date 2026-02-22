@@ -32,11 +32,11 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD}}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
         run: |
-        # Running NBA ETL Pipeline
-          python extract_nba.py
-          python load_nba.py
+          # Running NBA ETL Pipeline
+            python extract_nba.py
+            python load_nba.py
 
-        # Running NHL ELT Pipeline
-          python extract_nhl.py
-          python load_nhl.py
-          python transform_nhl.py
+          # Running NHL ELT Pipeline
+            python extract_nhl.py
+            python load_nhl.py
+            python transform_nhl.py
