@@ -3,6 +3,9 @@ import os
 from datetime import datetime
 from nba_api.stats.endpoints import leaguedashplayerstats
 
+# Grabbing proxy from Github Secrets
+proxy_url = os.getenv("PROXY_URL")
+
 # Setting up folder
 DATA_FOLDER = "nba_data"
 if not os.path.exists(DATA_FOLDER):
@@ -11,7 +14,10 @@ if not os.path.exists(DATA_FOLDER):
 print("Fetching NBA data from NBA.com...")
 
 # Fetching current season stats (Per Game avgs)
-nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(per_mode_detailed='PerGame')
+nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(
+    per_mode_detailed='PerGame',
+    proxy=proxy_url
+)
 df_raw = nba_stats.get_data_frames()[0]
 
 # Preparing Dimension Data (player profile)

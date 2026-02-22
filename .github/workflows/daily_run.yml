@@ -31,6 +31,7 @@ jobs:
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD}}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
         run: |
           # Running NBA ETL Pipeline
             python extract_nba.py
