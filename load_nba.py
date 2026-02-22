@@ -28,6 +28,11 @@ conn = snowflake.connector.connect(
     schema='RAW_DATA'
 )
 
+# Making Pipeline idempotent (getting rid of duplicates)
+print("Truncating old NBA tables...")
+conn.cursor().execute("TRUNCATE TABLE fact_game_performance")
+conn.cursor().execute("TRUNCATE TABLE dim_players")
+
 # Upload the Dimension Table
 print("Uploading NBA Players to dim_players...")
 success, nchunks, nrows, _ = write_pandas(conn, df_dim, 'DIM_PLAYERS', quote_identifiers=False)

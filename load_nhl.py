@@ -27,6 +27,10 @@ conn = snowflake.connector.connect(
     schema='RAW_DATA'
 )
 
+# Making pipeline idempotent
+print("Truncating old NHL tables...")
+conn.cursor().execute("TRUNCATE TABLE fact_nhl_performance")
+
 # Uploading Dimension Table
 print("Uploading NHL Players to dim_players...")
 # Using chunk_size to avoid memory issues 
