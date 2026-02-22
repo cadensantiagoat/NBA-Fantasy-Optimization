@@ -10,8 +10,13 @@ if not os.path.exists(DATA_FOLDER):
 
 print("Fetching Data from public NHL API...")
 
-# Pulling stats for a few teams to populate database
-teams = ["BOS", "TOR", "NYR", "COL"]
+# Pulling stats for all 32 NHL teams to populate database
+teams = [
+    'ANA', 'BOS', 'BUF', 'CGY', 'CAR', 'CHI', 'COL', 'CBJ', 
+    'DAL', 'DET', 'EDM', 'FLA', 'LAK', 'MIN', 'MTL', 'NSH', 
+    'NJD', 'NYI', 'NYR', 'OTT', 'PHI', 'PIT', 'SJS', 'SEA', 
+    'STL', 'TBL', 'TOR', 'UTA', 'VAN', 'VGK', 'WSH', 'WPG'
+]
 all_players = []
 all_stats = []
 
