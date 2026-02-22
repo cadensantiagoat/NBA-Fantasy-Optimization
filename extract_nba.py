@@ -1,43 +1,44 @@
 import pandas as pd
-import random
 import os
+from datetime import datetime
+from nba_api.stats.endpoints import leaguedashplayerstats
 
+# Setting up folder
 DATA_FOLDER = "nba_data"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-print("NBA API is blocking our connection. Switching to Mock Data Generator...")
+print("Fetching NBA data from NBA.com...")
 
-# A list of real player IDs and names
-players = [
-    (2544, "LeBron James"), (201939, "Stephen Curry"), (203999, "Nikola Jokic"), 
-    (1629029, "Luka Doncic"), (203507, "Giannis Antetokounmpo"), (1628369, "Jayson Tatum")
-]
+# Fetching current season stats (Per Game avgs)
+nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(per_mode_detailed='PerGame')
+df_raw = nba_stats.get_data_frames()[0]
 
-# 1. Create Dimension Data (The Nouns)
-df_dim = pd.DataFrame(players, columns=['player_id', 'full_name'])
+# Preparing Dimension Data (player profile)
+df_dim = pd.DataFrame({
+    'player_id': df_raw['PLAYER_ID'],
+    'full_name': df_raw['PLAYER_NAME'],
+    'sport': 'NBA'
+})
 
-# 2. Create Fact Data (The Verbs/Stats)
-fact_data = []
-for pid, name in players:
-    fact_data.append({
-        'game_id': '0022300001',
-        'player_id': pid,
-        'team_id': random.randint(1610612737, 1610612766),
-        'game_date': '2026-02-11',
-        'points': random.randint(15, 40),
-        'assists': random.randint(2, 12),
-        'rebounds': random.randint(3, 15),
-        'steals': random.randint(0, 3),
-        'blocks': random.randint(0, 3),
-        'turnovers': random.randint(0, 5),
-        'minutes_played': round(random.uniform(25.0, 40.0), 1)
-    })
+# Preparing Fact Data (stats)
+df_fact = pd.DataFrame({
+    'game_id': 'NBA_2024_SEASON',
+    'player_id': df_raw['PLAYER_ID'],
+    'team_id': df_raw['TEAM_ABBREVIATION'],
+    'game_date': datetime.today().strftime('%Y-%m-%d'),
+    'points': df_raw['PTS'],
+    'rebounds': df_raw['REB'],
+    'assists': df_raw['AST'],
+    'steals': df_raw['STL'],
+    'blocks': df_raw['BLK'],
+    # DraftKings NBA Scoring Model: PTS(1), REB(1.2), AST(1.5), STL(3), BLK(3)
+    'fantasy_points': (df_raw['PTS'] * 1) + (df_raw['REB'] * 1.2) + (df_raw['AST'] * 1.5) + (df_raw['STL'] * 3) + (df_raw['BLK'] * 3)
+})
 
-df_fact = pd.DataFrame(fact_data)
+# Saving to CSVs
+date_str = datetime.today().strftime('%Y%m%d')
+df_dim.to_csv(f"{DATA_FOLDER}/dim_players_nba_{date_str}.csv", index=False)
+df_fact.to_csv(f"{DATA_FOLDER}/fact_nba_perf_{date_str}.csv", index=False)
 
-# 3. Save to CSVs
-df_fact.to_csv(f"{DATA_FOLDER}/fact_perf_20260211.csv", index=False)
-df_dim.to_csv(f"{DATA_FOLDER}/dim_players_20260211.csv", index=False)
-
-print("Success! Generated local CSVs safely.")
+print(f"Successfully saved stats for {len(df_dim)} NBA players!")
