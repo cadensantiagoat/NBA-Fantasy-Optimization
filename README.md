@@ -31,7 +31,7 @@ The project follows a Star Schema design optimized for analytical queries and da
 ## Getting Started (Local Development)
 
 1. **Clone the repository:**
-   git clone [https://github.com/yourusername/NBA-Fantasy-Optimization.git](https://github.com/yourusername/NBA-Fantasy-Optimization.git)
+   git clone [https://github.com/cadensantiagoat/NBA-Fantasy-Optimization.git](https://github.com/cadensantiagoat/NBA-Fantasy-Optimization.git)
 
 2. **Install Requrements:**
    pip install -r requirements.txt
