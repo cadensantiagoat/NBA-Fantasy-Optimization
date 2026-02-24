@@ -37,6 +37,7 @@ jobs:
           # Running NBA ETL Pipeline
             python extract_nba.py
             python load_nba.py
+            python transform_nba.py
 
           # Running NHL ELT Pipeline
             python extract_nhl.py

@@ -38,8 +38,6 @@ df_fact = pd.DataFrame({
     'assists': df_raw['AST'],
     'steals': df_raw['STL'],
     'blocks': df_raw['BLK'],
-    # DraftKings NBA Scoring Model: PTS(1), REB(1.2), AST(1.5), STL(3), BLK(3)
-    'fantasy_points': (df_raw['PTS'] * 1) + (df_raw['REB'] * 1.2) + (df_raw['AST'] * 1.5) + (df_raw['STL'] * 3) + (df_raw['BLK'] * 3)
 })
 
 # Saving to CSVs
