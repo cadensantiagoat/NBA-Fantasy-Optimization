@@ -1,47 +1,59 @@
-**NBA Fantasy Optimization Pipeline**
+# Multi-Sport Fantasy Optimization Pipeline & Dashboard
 
-An end-to-end data engineering pipeline that extracts NBA player performance data, transforms it using Python and Pandas, and loads it into a Snowflake Cloud Data Warehouse using a Star Schema architecture.
+An end-to-end, fully automated data engineering pipeline that extracts live NBA and NHL player performance data, transforms it to calculate Daily Fantasy Sports (DFS) points, loads it into a Snowflake Cloud Data Warehouse, and serves it to an interactive web dashboard.
 
-**Note**
+## Live Dashboard
+**[(https://fantasy-optimization.streamlit.app/)]**
 
-During development, external API restrictions blocked live data fetching. To maintain development velocity, I implemented a Mock Data Engine (extract_nba.py) that generates schema-accurate player and game stats, allowing for continuous testing of the Snowflake integration.
+<img width="1197" height="551" alt="image" src="https://github.com/user-attachments/assets/ae98d6f7-81e1-4761-8c8d-9efbd5f08261" />
+<img width="1172" height="555" alt="image" src="https://github.com/user-attachments/assets/e64eb253-5688-456b-9a94-597c2eaf7749" />
 
-**Tech Stack**
 
-Language: Python 3.x
+## Tech Stack
+* **Language:** Python 3.10
+* **Data Warehouse:** Snowflake
+* **Frontend:** Streamlit, Altair (for interactive horizontal bar charts)
+* **Automation & CI/CD:** GitHub Actions
+* **Libraries:** Pandas, `snowflake-connector-python[pandas]`, `nba_api`, `requests`, `python-dotenv`
 
-Data Warehouse: Snowflake
+## Architecture
+The project follows a Star Schema design optimized for analytical queries and dashboarding:
+* **Fact Tables:** `fact_game_performance` (NBA stats) and `fact_nhl_performance` (NHL stats)
+* **Dimension Table:** `dim_players` (Player metadata and sport classification)
 
-Libraries: Pandas, Snowflake-Connector-Python, Dotenv
+## Key Features
+* **Fully Automated Daily ETL/ELT:** A GitHub Actions Cron job spins up a cloud server daily to run the extraction, loading, and transformation scripts without manual intervention.
+* **Firewall Evasion & Web Scraping:** Uses a custom residential proxy network to successfully pull live JSON data from strict sports endpoints (stats.nba.com).
+* **Idempotent Cloud Loads:** Utilizes `TRUNCATE TABLE` before `write_pandas` inserts to ensure perfectly clean, duplicate-free daily data refreshes in Snowflake.
+* **Custom DFS Scoring:** Uses SQL to calculate real-world DraftKings Daily Fantasy scoring models for both basketball and hockey directly in the data warehouse.
+* **Interactive Data Visualization:** A Streamlit frontend that queries Snowflake in real-time, featuring dynamic Altair horizontal bar charts with interactive sliders and tooltips.
 
-Database Logic: SQL (DDL, DML, MERGE)
+## Getting Started (Local Development)
 
-**Architecture**
+1. **Clone the repository:**
+   git clone [https://github.com/yourusername/NBA-Fantasy-Optimization.git](https://github.com/yourusername/NBA-Fantasy-Optimization.git)
 
-The project follows a Star Schema design to optimize for analytical queries:
+2. **Install Requrements:**
+   pip install -r requirements.txt
 
-Fact Table: fact_game_performance (Points, Assists, Rebounds, Steals, etc.)
+3. **Configure Environment Variables**
+   Create a .env file in the root directory and add your Snowflake and Proxy credentials:
+   SNOWFLAKE_USER="your_username"
+   SNOWFLAKE_PASSWORD="your_password"
+   SNOWFLAKE_ACCOUNT="your_account_identifier"
+   PROXY_URL="your_webshare_proxy_url"
 
-Dimension Table: dim_players (Player metadata)
+4. **Run the Extraction Scripts (API to CSV)**
+   python extract_nba.py
+   python extract_nhl.py
 
-Staging Area: Temporary tables (stg_) used for data validation before the final MERGE
+5. **Run the Load Scripts (CSV to Snowflake)**
+   python load_nba.py
+   python load_nhl.py
 
-**Key Features**
+6. **Run the Transformation Scripts (Calculate Fantasy Points)**
+   python transform_nba.py
+   python transform_nhl.py
 
-Idempotent Loads: Uses SQL MERGE logic to prevent duplicate records during daily stat updates.
-
-Automated Schema: Includes setup_database.sql for environment initialization.
-
-Secure Configuration: Utilizes environment variables for database authentication.
-
-**Getting Started**
-
-Clone the repo.
-
-Create a .env file with your Snowflake credentials.
-
-Run setup_database.sql in your Snowflake worksheet.
-
-Execute extract_nba.py to generate data.
-
-Execute load_nba.py to push to the cloud.
+7. **Launch the Dashboard:**
+   streamlit run dashboard.py
