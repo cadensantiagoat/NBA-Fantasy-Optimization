@@ -18,7 +18,7 @@ An end-to-end, fully automated data engineering pipeline that extracts live NBA 
 
 ## Architecture
 The pipeline is fully automated using GitHub Actions and extracts live data, bypassing proxy blocks, to land the raw JSON data into Snowflake for SQL-based transformation.
-![Data Pipeline Architecture Diagram](images/fantasy-optimization-data_pipline_architecture_diagram.png).
+![Data Pipeline Architecture Diagram](images/fantasy_optimization_data_pipeline_architecture_diagram.png).
 
 The project follows a Star Schema design optimized for analytical queries and dashboarding:
 * **Fact Tables:** `fact_game_performance` (NBA stats) and `fact_nhl_performance` (NHL stats)
