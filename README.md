@@ -17,6 +17,8 @@ An end-to-end, fully automated data engineering pipeline that extracts live NBA 
 * **Libraries:** Pandas, `snowflake-connector-python[pandas]`, `nba_api`, `requests`, `python-dotenv`
 
 ## Architecture
+![Star Schema ERD](fantasy-optimization-ERmodel.png).
+
 The project follows a Star Schema design optimized for analytical queries and dashboarding:
 * **Fact Tables:** `fact_game_performance` (NBA stats) and `fact_nhl_performance` (NHL stats)
 * **Dimension Table:** `dim_players` (Player metadata and sport classification)
