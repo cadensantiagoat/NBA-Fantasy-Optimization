@@ -23,12 +23,11 @@ cursor = conn.cursor()
 transform_sql = """
 UPDATE fact_game_performance
 SET fantasy_points =
-    (points * 1.0) +
-    (rebounds * 1.2) +
-    (assists * 1.5) +
-    (steals * 3.0) +
-    (blocks * 3.0) -
-    (turnovers * 1.0);
+    (COALESCE(points, 0) * 1.0) +
+    (COALESCE(rebounds, 0) * 1.2) +
+    (COALESCE(assists, 0) * 1.5) +
+    (COALESCE(steals, 0) * 3.0) +
+    (COALESCE(blocks, 0) * 3.0);
 """
 
 print("Calculating Fantasy Points based on raw stats...")

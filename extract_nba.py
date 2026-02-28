@@ -40,6 +40,8 @@ df_fact = pd.DataFrame({
     'blocks': df_raw['BLK'],
 })
 
+print(df_fact.columns.tolist())
+
 # Saving to CSVs
 date_str = datetime.today().strftime('%Y%m%d')
 df_dim.to_csv(f"{DATA_FOLDER}/dim_players_nba_{date_str}.csv", index=False)
