@@ -1,47 +1,52 @@
 import pandas as pd
-import snowflake.connector
-from snowflake.connector.pandas_tools import write_pandas
-import os
 from dotenv import load_dotenv
+from sqlalchemy import text
+
+from db import get_engine
 
 load_dotenv()
 
-# Point to the NBA data folder
 DATA_FOLDER = "nba_data"
-date_str = pd.Timestamp.now().strftime('%Y%m%d')
+date_str = pd.Timestamp.now().strftime("%Y%m%d")
 
-# Read the NEW real data files
 df_dim = pd.read_csv(f"{DATA_FOLDER}/dim_players_nba_{date_str}.csv")
 df_fact = pd.read_csv(f"{DATA_FOLDER}/fact_nba_perf_{date_str}.csv")
 
-# Snowflake prefers uppercase column names
-df_dim.columns = [col.upper() for col in df_dim.columns]
-df_fact.columns = [col.upper() for col in df_fact.columns]
+# Postgres uses lowercase identifiers by default; keep CSV snake_case.
+print("Connecting to PostgreSQL...")
+engine = get_engine()
 
-print("Connecting to Snowflake...")
-conn = snowflake.connector.connect(
-    user=os.getenv("SNOWFLAKE_USER"),
-    password=os.getenv("SNOWFLAKE_PASSWORD"),
-    account=os.getenv("SNOWFLAKE_ACCOUNT"),
-    warehouse="COMPUTE_WH",
-    database='NBA_FANTASY_DB',
-    schema='RAW_DATA'
-)
-
-# Making Pipeline idempotent (getting rid of duplicates)
 print("Truncating old NBA tables...")
-conn.cursor().execute("TRUNCATE TABLE fact_game_performance")
-conn.cursor().execute("TRUNCATE TABLE dim_players")
+with engine.begin() as conn:
+    conn.execute(
+        text(
+            "TRUNCATE TABLE raw_data.fact_game_performance, raw_data.dim_players"
+        )
+    )
 
-# Upload the Dimension Table
 print("Uploading NBA Players to dim_players...")
-success, nchunks, nrows, _ = write_pandas(conn, df_dim, 'DIM_PLAYERS', quote_identifiers=False)
-print(f"Inserted {nrows} players into dimension table.")
+df_dim.to_sql(
+    "dim_players",
+    engine,
+    schema="raw_data",
+    if_exists="append",
+    index=False,
+    method="multi",
+    chunksize=5000,
+)
+print(f"Inserted {len(df_dim)} players into dimension table.")
 
-# Upload the Fact Table
 print("Uploading NBA Stats to fact_game_performance...")
-success, nchunks, nrows, _ = write_pandas(conn, df_fact, 'FACT_GAME_PERFORMANCE', quote_identifiers=False)
-print(f"Inserted {nrows} stat rows into fact table.")
+df_fact.to_sql(
+    "fact_game_performance",
+    engine,
+    schema="raw_data",
+    if_exists="append",
+    index=False,
+    method="multi",
+    chunksize=5000,
+)
+print(f"Inserted {len(df_fact)} stat rows into fact table.")
 
-conn.close()
-print("Successfully loaded all NBA data into Snowflake!")
+engine.dispose()
+print("Successfully loaded all NBA data into PostgreSQL!")

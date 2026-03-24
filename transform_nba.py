@@ -1,27 +1,15 @@
-import os
-import snowflake.connector
 from dotenv import load_dotenv
+from sqlalchemy import text
 
-# Loading .env file for credentials
+from db import get_engine
+
 load_dotenv()
 
-print("Connecting to Snowflake for Tranformation...")
-conn = snowflake.connector.connect(
-    user=os.getenv("SNOWFLAKE_USER"),
-    password=os.getenv("SNOWFLAKE_PASSWORD"),
-    account=os.getenv("SNOWFLAKE_ACCOUNT"),
-    warehouse="COMPUTE_WH",
-    database='NBA_FANTASY_DB',
-    schema='RAW_DATA'
-)
+print("Connecting to PostgreSQL for transformation...")
+engine = get_engine()
 
-cursor = conn.cursor()
-
-# Transformation SQL
-
-# Calculates fantasy score based on standard DFS rules
 transform_sql = """
-UPDATE fact_game_performance
+UPDATE raw_data.fact_game_performance
 SET fantasy_points =
     (COALESCE(points, 0) * 1.0) +
     (COALESCE(rebounds, 0) * 1.2) +
@@ -33,13 +21,11 @@ SET fantasy_points =
 print("Calculating Fantasy Points based on raw stats...")
 
 try:
-    # executing SQL
-    cursor.execute(transform_sql)
-    print("Transformation complete! Fantasy points updated in Snowflake.")
+    with engine.begin() as conn:
+        conn.execute(text(transform_sql))
+    print("Transformation complete! Fantasy points updated in PostgreSQL.")
 except Exception as e:
     print(f"Error during transformation: {e}")
 finally:
-    # Clean up the connection
-    cursor.close()
-    conn.close()
+    engine.dispose()
     print("Connection closed.")
