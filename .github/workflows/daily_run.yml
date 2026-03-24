@@ -24,14 +24,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas "snowflake-connector-python[pandas]" requests nba_api python-dotenv
+          pip install pandas sqlalchemy psycopg2-binary requests nba_api python-dotenv
       
       - name: Run NBA & NHL Data Pipelines
-      # passing Snowflake credentials as hidden
         env:
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD}}
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
         run: |
           # Running NBA ETL Pipeline
