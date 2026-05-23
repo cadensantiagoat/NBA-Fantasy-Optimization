@@ -2,9 +2,19 @@ import pandas as pd
 import os
 from datetime import datetime
 from nba_api.stats.endpoints import leaguedashplayerstats
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Grabbing proxy from Github Secrets
 proxy_url = os.getenv("PROXY_URL")
+
+# Explicitly set proxy environment variables. 
+# 'requests' (used by nba_api) automatically detects these and handles 
+# proxy authentication handshakes more reliably in headless environments.
+if proxy_url:
+    os.environ["HTTP_PROXY"] = proxy_url
+    os.environ["HTTPS_PROXY"] = proxy_url
 
 # Setting up folder
 DATA_FOLDER = "nba_data"
@@ -14,9 +24,13 @@ if not os.path.exists(DATA_FOLDER):
 print("Fetching NBA data from NBA.com...")
 
 # Fetching current season stats (Per Game avgs)
+# Added a common browser User-Agent to avoid being flagged as a bot by NBA.com
 nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(
     per_mode_detailed='PerGame',
-    proxy=proxy_url
+    proxy=proxy_url,
+    headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
 )
 df_raw = nba_stats.get_data_frames()[0]
 
