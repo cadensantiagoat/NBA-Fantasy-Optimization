@@ -34,19 +34,21 @@ else:  # From October onwards, we are in the season starting this year
 print(f"Targeting Season: {current_season}")
 
 MAX_RETRIES = 3
-RETRY_DELAY = 5 # seconds
+RETRY_DELAY = 10 # seconds
 
 custom_headers = {
     'Host': 'stats.nba.com',
-    'Connection': 'keep-alive',
+    'Connection': 'close',
     'Accept': 'application/json, text/plain, */*',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     'Origin': 'https://www.nba.com',
     'Sec-Fetch-Site': 'same-site',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Dest': 'empty',
     'Referer': 'https://www.nba.com/',
     'Accept-Language': 'en-US,en;q=0.9',
+    'x-nba-stats-origin': 'stats',
+    'x-nba-stats-token': 'true',
 }
 
 season_types = ['Regular Season', 'Playoffs']
@@ -62,7 +64,7 @@ for s_type in season_types:
                 season_type_all_star=s_type,
                 proxy=proxy_url,
                 headers=custom_headers,
-                timeout=30
+                timeout=60
             )
             df = nba_stats.get_data_frames()[0]
             if not df.empty:
