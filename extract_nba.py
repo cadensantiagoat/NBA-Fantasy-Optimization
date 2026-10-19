@@ -1,46 +1,62 @@
+import requests
 import pandas as pd
 import os
+import sys
 from datetime import datetime
-from nba_api.stats.endpoints import leaguedashplayerstats
 
-# Grabbing proxy from Github Secrets
-proxy_url = os.getenv("PROXY_URL")
+# ESPN's public stats API (stats.nba.com blocks cloud IPs like GitHub Actions)
+URL = "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete"
 
 # Setting up folder
 DATA_FOLDER = "nba_data"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-print("Fetching NBA data from NBA.com...")
+print("Fetching NBA data from ESPN...")
 
-# Fetching current season stats (Per Game avgs)
-nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(
-    per_mode_detailed='PerGame',
-    proxy=proxy_url
-)
-df_raw = nba_stats.get_data_frames()[0]
+# Without a season param ESPN returns the latest regular season with stats (Per Game avgs)
+response = requests.get(URL, params={"limit": 1000}, timeout=30)
+response.raise_for_status()
+data = response.json()
+athletes = data.get("athletes", [])
 
-# Preparing Dimension Data (player profile)
-df_dim = pd.DataFrame({
-    'player_id': df_raw['PLAYER_ID'],
-    'full_name': df_raw['PLAYER_NAME'],
-    'sport': 'NBA'
-})
+# load_nba.py truncates before inserting, so never hand it an empty file
+if not athletes:
+    sys.exit("No NBA stats returned; aborting so existing data isn't wiped.")
 
-# Preparing Fact Data (stats)
-df_fact = pd.DataFrame({
-    'game_id': 'NBA_2024_SEASON',
-    'player_id': df_raw['PLAYER_ID'],
-    'team_id': df_raw['TEAM_ABBREVIATION'],
-    'game_date': datetime.today().strftime('%Y-%m-%d'),
-    'points': df_raw['PTS'],
-    'rebounds': df_raw['REB'],
-    'assists': df_raw['AST'],
-    'steals': df_raw['STL'],
-    'blocks': df_raw['BLK'],
-})
+season = data["requestedSeason"]["year"]
+all_players = []
+all_stats = []
 
-print(df_fact.columns.tolist())
+for entry in athletes:
+    athlete = entry["athlete"]
+    # Each category's values line up with the top-level category's stat names
+    stats = {}
+    for meta, cat in zip(data["categories"], entry["categories"]):
+        stats.update(zip(meta["names"], cat["totals"]))
+
+    # DIMENSION DATA (Player Profile)
+    all_players.append({
+        "player_id": int(athlete["id"]),
+        "full_name": athlete["displayName"],
+        "sport": "NBA",
+    })
+
+    # FACT DATA (Stats)
+    all_stats.append({
+        "game_id": f"NBA_{season}_SEASON",
+        "player_id": int(athlete["id"]),
+        "team_id": athlete.get("teamShortName"),
+        "game_date": datetime.today().strftime('%Y-%m-%d'),
+        "points": float(stats["avgPoints"]),
+        "rebounds": float(stats["avgRebounds"]),
+        "assists": float(stats["avgAssists"]),
+        "steals": float(stats["avgSteals"]),
+        "blocks": float(stats["avgBlocks"]),
+    })
+
+df_dim = pd.DataFrame(all_players).drop_duplicates(subset=["player_id"])
+df_fact = pd.DataFrame(all_stats)
 
 # Saving to CSVs
 date_str = datetime.today().strftime('%Y%m%d')
