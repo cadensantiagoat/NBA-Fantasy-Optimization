@@ -10,9 +10,11 @@ def get_database_url() -> str:
     """Build a SQLAlchemy/psycopg2 URL from DATABASE_URL or POSTGRES_* env vars."""
     url = os.getenv("DATABASE_URL")
     if url:
-        # Some hosts (e.g. Heroku-style) use postgres:// — SQLAlchemy expects postgresql://
-        if url.startswith("postgres://"):
-            url = "postgresql://" + url[len("postgres://") :]
+        # Pin the psycopg2 driver: SQLAlchemy 2.1 defaults plain postgresql:// to psycopg v3,
+        # and some hosts (e.g. Heroku-style) use postgres://
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg2://" + url[len(prefix) :]
         return url
     host = os.getenv("POSTGRES_HOST")
     user = os.getenv("POSTGRES_USER")
