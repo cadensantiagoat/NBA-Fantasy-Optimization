@@ -60,7 +60,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader(f"Top {sport_choice} Performers (Raw Data)")
-    st.dataframe(df_fantasy, use_container_width=True)
+    st.dataframe(df_fantasy, width="stretch")
 
 with col2:
     st.subheader(f"{sport_choice} Fantasy Points Leaderboard")
@@ -73,4 +73,4 @@ with col2:
         tooltip=["FULL_NAME", "FANTASY_POINTS"],
     ).interactive()
 
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
