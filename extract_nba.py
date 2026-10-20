@@ -1,66 +1,116 @@
 import requests
 import pandas as pd
 import os
-import sys
+import time
 from datetime import datetime
+from nba_api.stats.endpoints import leaguedashplayerstats
+from dotenv import load_dotenv
 
-# ESPN's public stats API (stats.nba.com blocks cloud IPs like GitHub Actions)
-URL = "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete"
+load_dotenv()
+
+# Grabbing proxy from Github Secrets
+proxy_url = os.getenv("PROXY_URL").strip() if os.getenv("PROXY_URL") else None
+
+# Explicitly set proxy environment variables. 
+# 'requests' (used by nba_api) automatically detects these and handles 
+# proxy authentication handshakes more reliably in headless environments.
+if proxy_url:
+    os.environ["HTTP_PROXY"] = proxy_url
+    os.environ["HTTPS_PROXY"] = proxy_url
 
 # Setting up folder
 DATA_FOLDER = "nba_data"
 if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
-print("Fetching NBA data from ESPN...")
+print("Fetching NBA data from NBA.com...")
 
-# Without a season param ESPN returns the latest regular season with stats (Per Game avgs)
-response = requests.get(URL, params={"limit": 1000}, timeout=30)
-response.raise_for_status()
-data = response.json()
-athletes = data.get("athletes", [])
+# Dynamically calculate the current NBA season string (e.g., "2024-25")
+now = datetime.now()
+if now.month < 10:  # Before October, we are in the season that started last year
+    current_season = f"{now.year-1}-{str(now.year)[-2:]}"
+else:  # From October onwards, we are in the season starting this year
+    current_season = f"{now.year}-{str(now.year+1)[-2:]}"
 
-# load_nba.py truncates before inserting, so never hand it an empty file
-if not athletes:
-    sys.exit("No NBA stats returned; aborting so existing data isn't wiped.")
+print(f"Targeting Season: {current_season}")
 
-season = data["requestedSeason"]["year"]
-all_players = []
-all_stats = []
+MAX_RETRIES = 3
+RETRY_DELAY = 10 # seconds
 
-for entry in athletes:
-    athlete = entry["athlete"]
-    # Each category's values line up with the top-level category's stat names
-    stats = {}
-    for meta, cat in zip(data["categories"], entry["categories"]):
-        stats.update(zip(meta["names"], cat["totals"]))
+custom_headers = {
+    'Host': 'stats.nba.com',
+    'Connection': 'close',
+    'Accept': 'application/json, text/plain, */*',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Origin': 'https://www.nba.com',
+    'Sec-Fetch-Site': 'same-site',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty',
+    'Referer': 'https://www.nba.com/',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'x-nba-stats-origin': 'stats',
+    'x-nba-stats-token': 'true',
+}
 
-    # DIMENSION DATA (Player Profile)
-    all_players.append({
-        "player_id": int(athlete["id"]),
-        "full_name": athlete["displayName"],
-        "sport": "NBA",
-    })
+season_types = ['Regular Season', 'Playoffs']
+dfs_raw = []
 
-    # FACT DATA (Stats)
-    all_stats.append({
-        "game_id": f"NBA_{season}_SEASON",
-        "player_id": int(athlete["id"]),
-        "team_id": athlete.get("teamShortName"),
-        "game_date": datetime.today().strftime('%Y-%m-%d'),
-        "points": float(stats["avgPoints"]),
-        "rebounds": float(stats["avgRebounds"]),
-        "assists": float(stats["avgAssists"]),
-        "steals": float(stats["avgSteals"]),
-        "blocks": float(stats["avgBlocks"]),
-    })
+for s_type in season_types:
+    print(f"Fetching {s_type} stats...")
+    for attempt in range(MAX_RETRIES):
+        try:
+            nba_stats = leaguedashplayerstats.LeagueDashPlayerStats(
+                per_mode_detailed='PerGame',
+                season=current_season,
+                season_type_all_star=s_type,
+                proxy=proxy_url,
+                headers=custom_headers,
+                timeout=60
+            )
+            df = nba_stats.get_data_frames()[0]
+            if not df.empty:
+                df['SEASON_TYPE'] = s_type
+                dfs_raw.append(df)
+            break # Success for this season type
+        except Exception as e:
+            print(f"Attempt {attempt + 1} for {s_type} failed: {e}")
+            if attempt < MAX_RETRIES - 1:
+                print(f"Retrying in {RETRY_DELAY} seconds...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"All attempts for {s_type} failed.")
 
-df_dim = pd.DataFrame(all_players).drop_duplicates(subset=["player_id"])
-df_fact = pd.DataFrame(all_stats)
+if not dfs_raw:
+    print("No data fetched for any season type. Exiting.")
+    exit(1)
+
+df_raw = pd.concat(dfs_raw, ignore_index=True)
+
+# Preparing Dimension Data (player profile)
+df_dim = pd.DataFrame({
+    'player_id': df_raw['PLAYER_ID'],
+    'full_name': df_raw['PLAYER_NAME'],
+    'sport': 'NBA'
+}).drop_duplicates(subset=['player_id'])
+
+# Preparing Fact Data (stats)
+df_fact = pd.DataFrame({
+    'game_id': df_raw.apply(lambda row: f"NBA_{current_season.replace('-', '_')}_{row['SEASON_TYPE'].replace(' ', '_').upper()}", axis=1),
+    'player_id': df_raw['PLAYER_ID'],
+    'team_id': df_raw['TEAM_ABBREVIATION'],
+    'game_date': datetime.today().strftime('%Y-%m-%d'),
+    'points': df_raw['PTS'],
+    'rebounds': df_raw['REB'],
+    'assists': df_raw['AST'],
+    'steals': df_raw['STL'],
+    'blocks': df_raw['BLK'],
+})
+
+print(df_fact.columns.tolist())
 
 # Saving to CSVs
 date_str = datetime.today().strftime('%Y%m%d')
 df_dim.to_csv(f"{DATA_FOLDER}/dim_players_nba_{date_str}.csv", index=False)
 df_fact.to_csv(f"{DATA_FOLDER}/fact_nba_perf_{date_str}.csv", index=False)
 
-print(f"Successfully saved stats for {len(df_dim)} NBA players!")
+print(f"Successfully saved {len(df_fact)} stats entries for {len(df_dim)} NBA players (Regular Season & Playoffs)!")
