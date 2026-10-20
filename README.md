@@ -14,10 +14,10 @@ An end-to-end, fully automated data engineering pipeline that extracts live NBA 
 * **Data Warehouse:** Snowflake
 * **Frontend:** Streamlit, Altair (for interactive horizontal bar charts)
 * **Automation & CI/CD:** GitHub Actions
-* **Libraries:** Pandas, `snowflake-connector-python[pandas]`, `nba_api`, `requests`, `python-dotenv`
+* **Libraries:** Pandas, `snowflake-connector-python[pandas]`, `requests` (ESPN & NHL public APIs), `python-dotenv`
 
 ## Architecture
-The pipeline is fully automated using GitHub Actions and extracts live data, bypassing proxy blocks, to land the raw JSON data into Snowflake for SQL-based transformation.
+The pipeline is fully automated using GitHub Actions and extracts live data to land the raw JSON data into Snowflake for SQL-based transformation.
 ![Data Pipeline Architecture Diagram](images/fantasy_optimization_data_pipeline_architecture_diagram.png).
 
 The project follows a Star Schema design optimized for analytical queries and dashboarding:
@@ -42,11 +42,10 @@ The project follows a Star Schema design optimized for analytical queries and da
    pip install -r requirements.txt
 
 3. **Configure Environment Variables**
-   Create a .env file in the root directory and add your Snowflake and Proxy credentials:
+   Create a .env file in the root directory and add your Snowflake credentials:
    SNOWFLAKE_USER="your_username"
    SNOWFLAKE_PASSWORD="your_password"
    SNOWFLAKE_ACCOUNT="your_account_identifier"
-   PROXY_URL="your_webshare_proxy_url"
 
 4. **Run the Extraction Scripts (API to CSV)**
    python extract_nba.py
